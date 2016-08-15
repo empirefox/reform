@@ -10,7 +10,7 @@ import (
 
 func filteredColumnsAndValues(str Struct, columnsIn []string, isUpdate bool) (columns []string, values []interface{}, err error) {
 	columnsSet := make(map[string]struct{}, len(columnsIn))
-	toCol := record.View().ToCol
+	toCol := str.View().ToCol
 	for _, c := range columnsIn {
 		columnsSet[toCol(strings.TrimLeft(c, "$"))] = struct{}{}
 	}
@@ -34,40 +34,6 @@ func filteredColumnsAndValues(str Struct, columnsIn []string, isUpdate bool) (co
 				err = fmt.Errorf("reform: will not update PK column: %s", c)
 				return
 			}
-			delete(columnsSet, c)
-			columns = append(columns, c)
-			values = append(values, allValues[i])
-		}
-	}
-
-	// make error for extra columns
-	if len(columnsSet) > 0 {
-		columns = make([]string, 0, len(columnsSet))
-		for c := range columnsSet {
-			columns = append(columns, c)
-		}
-		// TODO make exported type for that error
-		err = fmt.Errorf("reform: unexpected columns: %v", columns)
-		return
-	}
-
-	return
-}
-
-func filteredStructColumnsAndValues(str Struct, columnsIn []string) (columns []string, values []interface{}, err error) {
-	columnsSet := make(map[string]struct{}, len(columnsIn))
-	toCol := str.View().ToCol
-	for _, c := range columnsIn {
-		columnsSet[toCol(strings.TrimLeft(c, "$"))] = struct{}{}
-	}
-
-	// select columns from set and collect values
-	allColumns := str.View().Columns()
-	allValues := str.Values()
-	columns = make([]string, 0, len(columnsSet))
-	values = make([]interface{}, 0, len(columns))
-	for i, c := range allColumns {
-		if _, ok := columnsSet[c]; ok {
 			delete(columnsSet, c)
 			columns = append(columns, c)
 			values = append(values, allValues[i])
@@ -434,12 +400,7 @@ func (q *Querier) DsUpdateColumns(str Struct, ds *goqu.Dataset, columns ...strin
 	var values []interface{}
 	var cols []string
 
-	record, ok := str.(Record)
-	if ok {
-		cols, values, err = filteredColumnsAndValues(record, columns, true)
-	} else {
-		cols, values, err = filteredStructColumnsAndValues(str, columns)
-	}
+	cols, values, err = filteredColumnsAndValues(str, columns, true)
 	if err != nil {
 		return 0, err
 	}
