@@ -21,12 +21,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/mssql"
-	"gopkg.in/reform.v1/dialects/mysql"
-	"gopkg.in/reform.v1/dialects/postgresql"
-	"gopkg.in/reform.v1/dialects/sqlite3"
-	"gopkg.in/reform.v1/internal/test/models"
+	"github.com/empirefox/reform"
+	"github.com/empirefox/reform/dialects/mssql"
+	"github.com/empirefox/reform/dialects/mysql"
+	"github.com/empirefox/reform/dialects/postgresql"
+	"github.com/empirefox/reform/dialects/sqlite3"
+	"github.com/empirefox/reform/internal/test/models"
 )
 
 var (

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/reform.v1/parse"
+	"github.com/empirefox/reform/parse"
 )
 
 var (

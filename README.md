@@ -1,9 +1,9 @@
 # reform
-[![GoDoc](https://godoc.org/gopkg.in/reform.v1?status.svg)](https://godoc.org/gopkg.in/reform.v1)
+[![GoDoc](https://godoc.org/github.com/empirefox/reform?status.svg)](https://godoc.org/github.com/empirefox/reform)
 [![Travis CI Build Status](https://travis-ci.org/go-reform/reform.svg?branch=v1-stable)](https://travis-ci.org/go-reform/reform)
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/kbkyjmic461xa7b3/branch/v1-stable?svg=true)](https://ci.appveyor.com/project/AlekSi/reform/branch/v1-stable)
 [![Coverage Status](https://coveralls.io/repos/github/go-reform/reform/badge.svg?branch=v1-stable)](https://coveralls.io/github/go-reform/reform?branch=v1-stable)
-[![Go Report Card](https://goreportcard.com/badge/gopkg.in/reform.v1)](https://goreportcard.com/report/gopkg.in/reform.v1)
+[![Go Report Card](https://goreportcard.com/badge/github.com/empirefox/reform)](https://goreportcard.com/report/github.com/empirefox/reform)
 
 A better ORM for Go and `database/sql`.
 
@@ -19,7 +19,7 @@ Supported SQL dialects:
 ## Quickstart
 
 1. Make sure you are using Go 1.6+.
-2. Install or update it: `go get -u gopkg.in/reform.v1/reform` (see about versioning below)
+2. Install or update it: `go get -u github.com/empirefox/reform/reform` (see about versioning below)
 3. Define your first model in file `person.go`:
 
     ```go
@@ -41,7 +41,7 @@ Supported SQL dialects:
 
 4. Run `reform [package or directory]` or `go generate [package or file]`. This will create `person_reform.go`
    in the same package with type `PersonTable` and methods on `Person`.
-5. See [documentation](https://godoc.org/gopkg.in/reform.v1) how to use it. Simple example:
+5. See [documentation](https://godoc.org/github.com/empirefox/reform) how to use it. Simple example:
 
     ```go
 	// Use reform.NewDB to create DB.
@@ -109,12 +109,12 @@ using [gopkg.in](https://gopkg.in) and filling a [changelog](CHANGELOG.md).
 
 We use branch `v1-stable` (default on Github) for v1 development and tags `v1.Y.Z` for releases.
 All v1 releases are SemVer-compatible, breaking changes will not be applied.
-Canonical import path is `gopkg.in/reform.v1`.
-`go get -u gopkg.in/reform.v1` will install latest released version.
+Canonical import path is `github.com/empirefox/reform`.
+`go get -u github.com/empirefox/reform` will install latest released version.
 To install not yet released v1 version one can do checkout manually while preserving import path:
 ```
-go get -u gopkg.in/reform.v1
-cd $GOPATH/gopkg.in/reform.v1
+go get -u github.com/empirefox/reform
+cd $GOPATH/github.com/empirefox/reform
 git checkout origin/v1-stable
 ```
 

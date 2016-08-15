@@ -3,7 +3,7 @@
 // This package, despite containing exported types, methods and functions,
 // is an internal part of implementation of 'reform' tool, used by generated files,
 // and not a part of public stable API.
-package parse // import "gopkg.in/reform.v1/parse"
+package parse // import "github.com/empirefox/reform/parse"
 
 import (
 	"fmt"

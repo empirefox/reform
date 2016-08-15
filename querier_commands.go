@@ -2,13 +2,17 @@ package reform
 
 import (
 	"fmt"
+	"os"
 	"strings"
+
+	"gopkg.in/doug-martin/goqu.v3"
 )
 
 func filteredColumnsAndValues(record Record, columnsIn []string, isUpdate bool) (columns []string, values []interface{}, err error) {
 	columnsSet := make(map[string]struct{}, len(columnsIn))
+	toCol := record.View().ToCol
 	for _, c := range columnsIn {
-		columnsSet[c] = struct{}{}
+		columnsSet[toCol(strings.TrimLeft(c, "$"))] = struct{}{}
 	}
 
 	// select columns from set and collect values
@@ -24,6 +28,40 @@ func filteredColumnsAndValues(record Record, columnsIn []string, isUpdate bool) 
 				err = fmt.Errorf("reform: will not update PK column: %s", c)
 				return
 			}
+			delete(columnsSet, c)
+			columns = append(columns, c)
+			values = append(values, allValues[i])
+		}
+	}
+
+	// make error for extra columns
+	if len(columnsSet) > 0 {
+		columns = make([]string, 0, len(columnsSet))
+		for c := range columnsSet {
+			columns = append(columns, c)
+		}
+		// TODO make exported type for that error
+		err = fmt.Errorf("reform: unexpected columns: %v", columns)
+		return
+	}
+
+	return
+}
+
+func filteredStructColumnsAndValues(str Struct, columnsIn []string) (columns []string, values []interface{}, err error) {
+	columnsSet := make(map[string]struct{}, len(columnsIn))
+	toCol := str.View().ToCol
+	for _, c := range columnsIn {
+		columnsSet[toCol(strings.TrimLeft(c, "$"))] = struct{}{}
+	}
+
+	// select columns from set and collect values
+	allColumns := str.View().Columns()
+	allValues := str.Values()
+	columns = make([]string, 0, len(columnsSet))
+	values = make([]interface{}, 0, len(columns))
+	for i, c := range allColumns {
+		if _, ok := columnsSet[c]; ok {
 			delete(columnsSet, c)
 			columns = append(columns, c)
 			values = append(values, allValues[i])
@@ -71,7 +109,7 @@ func (q *Querier) insert(str Struct, columns []string, values []interface{}) err
 
 	switch lastInsertIdMethod {
 	case LastInsertId:
-		res, err := q.Exec(query, values...)
+		res, err := q.Exec(os.Expand(query, view.ToCol), values...)
 		if err != nil {
 			return err
 		}
@@ -89,7 +127,7 @@ func (q *Querier) insert(str Struct, columns []string, values []interface{}) err
 		if record != nil {
 			err = q.QueryRow(query, values...).Scan(record.PKPointer())
 		} else {
-			_, err = q.Exec(query, values...)
+			_, err = q.Exec(os.Expand(query, view.ToCol), values...)
 		}
 		return err
 
@@ -234,7 +272,7 @@ func (q *Querier) InsertMulti(structs ...Struct) error {
 		values = append(values, v...)
 	}
 
-	_, err = q.Exec(query, values...)
+	_, err = q.Exec(os.Expand(query, view.ToCol), values...)
 	return err
 }
 
@@ -257,7 +295,7 @@ func (q *Querier) update(record Record, columns []string, values []interface{}) 
 	)
 
 	args := append(values, record.PKValue())
-	res, err := q.Exec(query, args...)
+	res, err := q.Exec(os.Expand(query, table.ToCol), args...)
 	if err != nil {
 		return err
 	}
@@ -312,6 +350,41 @@ func (q *Querier) Update(record Record) error {
 	return q.update(record, columns, values)
 }
 
+func (q *Querier) DsUpdateStruct(str Struct, ds *goqu.Dataset) (uint, error) {
+	if bu, ok := str.(BeforeUpdater); ok {
+		err := bu.BeforeUpdate()
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	values := str.Values()
+	columns := str.View().Columns()
+
+	var pk int
+	record, ok := str.(Table)
+	if ok {
+		pk = int(record.PKColumnIndex())
+	}
+
+	if ok {
+		values = append(values[:pk], values[pk+1:]...)
+		columns = append(columns[:pk], columns[pk+1:]...)
+	}
+
+	updates := make(map[string]interface{}, len(columns))
+	for i := 0; i < len(columns); i++ {
+		updates[columns[i]] = values[i]
+	}
+
+	query, args, err := ds.From(str.View().Name()).ToUpdateSql(updates)
+	if err != nil {
+		return 0, err
+	}
+
+	return q.DsExec(str.View(), query, args...)
+}
+
 // UpdateColumns updates specified columns of row specified by primary key in SQL database table with given record.
 // Other columns are omitted from generated UPDATE statement.
 // If record implements BeforeUpdater, it calls BeforeUpdate() before doing so.
@@ -335,6 +408,54 @@ func (q *Querier) UpdateColumns(record Record, columns ...string) error {
 	}
 
 	return q.update(record, columns, values)
+}
+
+func (q *Querier) DsUpdateColumns(str Struct, ds *goqu.Dataset, columns ...string) (uint, error) {
+	var err error
+
+	if bu, ok := str.(BeforeUpdater); ok {
+		err = bu.BeforeUpdate()
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	var values []interface{}
+	var cols []string
+
+	record, ok := str.(Record)
+	if ok {
+		cols, values, err = filteredColumnsAndValues(record, columns, true)
+	} else {
+		cols, values, err = filteredStructColumnsAndValues(str, columns)
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	if len(values) == 0 {
+		// TODO make exported type for that error
+		return 0, fmt.Errorf("reform: nothing to update")
+	}
+
+	updates := make(map[string]interface{}, len(cols))
+	for i := 0; i < len(cols); i++ {
+		updates[cols[i]] = values[i]
+	}
+
+	query, args, err := ds.From(str.View().Name()).ToUpdateSql(updates)
+	if err != nil {
+		return 0, err
+	}
+
+	return q.DsExec(str.View(), query, args...)
+}
+
+func (q *Querier) DsUpdate(str Struct, ds *goqu.Dataset, columns ...string) (uint, error) {
+	if len(columns) > 0 {
+		return q.DsUpdateColumns(str, ds, columns...)
+	}
+	return q.DsUpdateStruct(str, ds)
 }
 
 // Save saves record in SQL database table.
@@ -368,7 +489,7 @@ func (q *Querier) Delete(record Record) error {
 		q.Placeholder(1),
 	)
 
-	res, err := q.Exec(query, record.PKValue())
+	res, err := q.Exec(os.Expand(query, table.ToCol), record.PKValue())
 	if err != nil {
 		return err
 	}
@@ -394,7 +515,27 @@ func (q *Querier) DeleteFrom(view View, tail string, args ...interface{}) (uint,
 		tail,
 	)
 
-	res, err := q.Exec(query, args...)
+	res, err := q.Exec(os.Expand(query, view.ToCol), args...)
+	if err != nil {
+		return 0, err
+	}
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return uint(ra), nil
+}
+
+func (q *Querier) DsDelete(view View, ds *goqu.Dataset) (uint, error) {
+	query, args, err := ds.From(view.Name()).ToDeleteSql()
+	if err != nil {
+		return 0, err
+	}
+	return q.DsExec(view, query, args...)
+}
+
+func (q *Querier) DsExec(view View, query string, args ...interface{}) (uint, error) {
+	res, err := q.Exec(os.Expand(query, view.ToCol), args...)
 	if err != nil {
 		return 0, err
 	}

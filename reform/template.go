@@ -3,7 +3,7 @@ package main
 import (
 	"text/template"
 
-	"gopkg.in/reform.v1/parse"
+	"github.com/empirefox/reform/parse"
 )
 
 // StructData represents struct info for XXX_reform.go file generation.
@@ -15,19 +15,20 @@ type StructData struct {
 
 var (
 	prologTemplate = template.Must(template.New("prolog").Parse(`
-// generated with gopkg.in/reform.v1
+// generated with github.com/empirefox/reform
 
 import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/parse"
+	"github.com/empirefox/reform"
+	"github.com/empirefox/reform/parse"
 )
 `))
 
 	structTemplate = template.Must(template.New("struct").Parse(`
 type {{ .TableType }} struct {
+	*reform.ViewBase
 	s parse.StructInfo
 	z []interface{}
 }
@@ -153,6 +154,7 @@ var (
 func init() {
 	{{- range $i, $sd := . }}
 	parse.AssertUpToDate(&{{ $sd.TableVar }}.s, new({{ $sd.Type }}))
+	{{ $sd.TableVar }}.ViewBase = reform.NewViewBase(&{{ $sd.TableVar }}.s)
 	{{- end }}
 }
 `))

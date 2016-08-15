@@ -1,13 +1,13 @@
 package models
 
-// generated with gopkg.in/reform.v1
+// generated with github.com/empirefox/reform
 
 import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/parse"
+	"github.com/empirefox/reform"
+	"github.com/empirefox/reform/parse"
 )
 
 type personTable struct {
