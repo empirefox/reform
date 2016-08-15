@@ -3,6 +3,8 @@ package reform
 import (
 	"database/sql"
 	"errors"
+
+	"github.com/empirefox/reform/parse"
 )
 
 var (
@@ -12,6 +14,52 @@ var (
 	// ErrNoPK is returned from various methods when primary key is required and not set.
 	ErrNoPK = errors.New("reform: no primary key")
 )
+
+type ViewBase struct {
+	m      map[string]string
+	fields []string
+	icols  []interface{}
+	pk     string
+}
+
+func NewViewBase(s *parse.StructInfo) *ViewBase {
+	v := ViewBase{m: make(map[string]string)}
+	for _, info := range s.Fields {
+		v.m[info.Name] = info.Column
+		v.m[info.Column] = info.Column
+		v.fields = append(v.fields, info.Name)
+		v.icols = append(v.icols, info.Column)
+		if info.PKType != "" {
+			v.pk = info.Column
+		}
+	}
+	return &v
+}
+
+func (v *ViewBase) HasCol(field string) (string, bool) {
+	col, ok := v.m[field]
+	return col, ok
+}
+
+func (v *ViewBase) ToCol(field string) string {
+	col, ok := v.m[field]
+	if ok {
+		return col
+	}
+	return field
+}
+
+func (v *ViewBase) Fields() []string {
+	return v.fields
+}
+
+func (v *ViewBase) IColumns() []interface{} {
+	return v.icols
+}
+
+func (v *ViewBase) PK() string {
+	return v.pk
+}
 
 // View represents SQL database view or table.
 type View interface {
@@ -26,6 +74,14 @@ type View interface {
 
 	// NewStruct makes a new struct for that view or table.
 	NewStruct() Struct
+
+	HasCol(field string) (string, bool)
+
+	ToCol(field string) string
+
+	Fields() (fields []string)
+
+	IColumns() []interface{}
 }
 
 // Table represents SQL database table with single-column primary key.
@@ -38,6 +94,8 @@ type Table interface {
 
 	// PKColumnIndex returns an index of primary key column for that table in SQL database.
 	PKColumnIndex() uint
+
+	PK() string
 }
 
 // Struct represents a row in SQL database view or table.

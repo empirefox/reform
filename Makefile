@@ -16,12 +16,12 @@ init:
 
 install:
 	rm -f internal/test/models/*_reform.go
-	go install -v gopkg.in/reform.v1/...
+	go install -v github.com/empirefox/reform/...
 
 test: install
-	go test -coverprofile=parse.cover gopkg.in/reform.v1/parse
-	go generate -v -x gopkg.in/reform.v1/internal/test/models
-	go install -v gopkg.in/reform.v1/internal/test/models
+	go test -coverprofile=parse.cover github.com/empirefox/reform/parse
+	go generate -v -x github.com/empirefox/reform/internal/test/models
+	go install -v github.com/empirefox/reform/internal/test/models
 	go test -i -v
 
 check: test
